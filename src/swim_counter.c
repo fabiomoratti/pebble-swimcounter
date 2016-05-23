@@ -9,40 +9,48 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context);
 static void down_click_handler(ClickRecognizerRef recognizer, void *context);
 static void click_config_provider(void *context);
 
-const int LUNGHEZZA_VASCA = 2 * 50;
+const int LUNGHEZZA_VASCA = 2 * 25;
 Window *window;
 TextLayer *text_layer_counter;
 TextLayer *text_layer_style;
 TextLayer *text_layer_total;
+TextLayer *text_layer_detail;
+char detail_string[512];
 
 // contatore delle vasche
-int counter = 0;
+int counter;
 // TBWFM - andrebbe allocata dinamicamente
-char counter_string[2];
+char counter_string[4];
+
+// distanza percorsa totale
+int distanza_totale;
+// TBWFM - andrebbe allocata dinamicamente
+char distanza_totale_string[10];
 
 // indicazione dello stile
 int current_style_index;
-const char  *styles [] = {"Rana", "Stile", "Gambe Dorso", "Braccia Stile"};
-int number_of_styles;
-
-// distanza totale percorsa
-int total = 0;
-// TBWFM - andrebbe allocata dinamicamente
-char total_string[9];
+const int number_of_styles = 5;
+const char *styles [] = {" Rana", " Stile Libero", " Dorso", " Gambe Dorso", " Braccia Stile"};
+int distanza_per_stile[5];
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
   //text_layer_set_text(text_layer, "Select");
 }
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
-  //text_layer_set_text(text_layer, "Up");
-  counter = counter + 1;
+  if(counter >= 0){
+    distanza_totale += LUNGHEZZA_VASCA;
+    distanza_per_stile[current_style_index] += LUNGHEZZA_VASCA;
+  }
+  counter += 1;
   update_text_layers();
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-  //text_layer_set_text(text_layer, "Down");
+  
+  counter = -1;
   current_style_index = (current_style_index + 1) % number_of_styles;
+  
   update_text_layers();
 }
 
@@ -57,42 +65,72 @@ static void click_config_provider(void *context) {
  */
 void init_text_layers(){
   
-  // investigare sulle dimensioni
-  text_layer_counter = text_layer_create(GRect(0,0,144,40));
+  int y1 = 0;
+  int y2 = 42;
+  text_layer_counter = text_layer_create(GRect(0, y1, 144, y2));
+  text_layer_set_text_alignment(text_layer_counter, GTextAlignmentCenter);
+  text_layer_set_font(text_layer_counter, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
   
-  // investigare sulle dimensioni
-  text_layer_style = text_layer_create(GRect(0,40,144,80));
+  y1 = y2 + 1;
+  y2 = y1 + 28;
+  text_layer_style = text_layer_create(GRect(0, y1, 144, y2)); 
+  text_layer_set_text_alignment(text_layer_style, GTextAlignmentLeft);
+  text_layer_set_font(text_layer_style, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
 
-  // investigare sulle dimensioni
-  text_layer_total = text_layer_create(GRect(0,80,144,120));
+  y1 = y2 + 1;
+  y2 = y1 + 28;
+  text_layer_total = text_layer_create(GRect(0, y1, 144, y2));
+  text_layer_set_text_alignment(text_layer_total, GTextAlignmentCenter);
+  text_layer_set_font(text_layer_total, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+
+  y1 = y2 + 1;
+  y2 = 168;
+  text_layer_detail = text_layer_create(GRect(0, y1, 144, y2));
+  text_layer_set_text_alignment(text_layer_detail, GTextAlignmentLeft);
+  text_layer_set_font(text_layer_detail, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
 
   update_text_layers();
     
   layer_add_child(window_get_root_layer(window), text_layer_get_layer(text_layer_counter));
   layer_add_child(window_get_root_layer(window), text_layer_get_layer(text_layer_style));
   layer_add_child(window_get_root_layer(window), text_layer_get_layer(text_layer_total));
+  layer_add_child(window_get_root_layer(window), text_layer_get_layer(text_layer_detail));
 
 }
 
 void update_text_layers(){
   
   // counter
-  snprintf(counter_string, sizeof(counter_string), "%d", counter);
-  text_layer_set_text(text_layer_counter, counter_string);
-
+  if(counter == -1){
+    snprintf(counter_string, sizeof(counter_string), "%s", "-");
+    text_layer_set_text(text_layer_counter, counter_string);
+  } else {
+    snprintf(counter_string, sizeof(counter_string), "%d", counter);
+    text_layer_set_text(text_layer_counter, counter_string);
+  }
+  
   // style
   text_layer_set_text(text_layer_style, styles[current_style_index]);
 
   // total
-  snprintf(total_string, sizeof(total_string), "%d", counter * LUNGHEZZA_VASCA);
-  text_layer_set_text(text_layer_total, total_string);
-
+  snprintf(distanza_totale_string, sizeof(distanza_totale_string), "%d", distanza_totale);
+  text_layer_set_text(text_layer_total, distanza_totale_string);
+  
+  // detail
+  snprintf(detail_string, sizeof(detail_string), " Rana: %d - Stile Libero: %d - Dorso: %d - Gambe Dorso: %d - Braccia Stile %d ", distanza_per_stile[0], distanza_per_stile[1], distanza_per_stile[2], distanza_per_stile[3], distanza_per_stile[4]);
+  text_layer_set_text(text_layer_detail, detail_string);
 }
 
 void init_data(){
-  // TBWFM - sistemare con la size dell'array
-  number_of_styles = 4;
+  int i;
+  
+  counter = -1;
+  distanza_totale = 0;
   current_style_index = 0;
+  
+  for(i=0; i<number_of_styles; i++ ){
+    distanza_per_stile[i] = 0;
+  }
 }
 
 // init function
